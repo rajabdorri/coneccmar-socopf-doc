@@ -1,0 +1,439 @@
+\documentclass[12pt,a4paper]{iit-project-draft-report}
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{siunitx}
+\usepackage[acronym]{glossaries}
+\usepackage[nottoc]{tocbibind}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+
+\makeglossaries
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Acrónimos
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newacronym{CA}{CA}{Corriente Alterna}
+\newacronym{CC}{CC}{Corriente Continua}
+\newacronym{OPF}{OPF}{flujo óptimo de potencia, o {\em Optimal Power Flow}}
+\newacronym{SOC}{SOC}{cono de segundo orden, o {\em Second-Order Cone}}
+\newacronym{SOCP}{SOCP}{programación cónica de segundo orden, o {\em Second-Order Cone Programming}}
+\newacronym{SDP}{SDP}{programación semidefinida, o {\em Semidefinite Programming}}
+\newacronym{HVDC}{HVDC}{transmisión en corriente continua de alta tensión, o {\em High Voltage Direct Current Transmission}}
+\newacronym{VSC}{VSC}{convertidor fuente de tensión, o {\em Voltage Source Converter}}
+\newacronym{GFL}{GFL}{seguidor de red, o {\em Grid-Following}}
+\newacronym{FUBM}{FUBM}{modelo de rama universal flexible, o {\em Flexible Universal Branch Model}}
+\newacronym{CFBM}{CFBM}{modelo convexo de rama flexible, o {\em Convex Flexible Branch Model}}
+\newacronym{NTC}{NTC}{capacidad neta de transferencia, o {\em Net Transfer Capacity}}
+\newacronym{TSO}{TSO}{operador del sistema de transmisión, o {\em Transmission System Operator}}
+\newacronym{MATPOWER}{MATPOWER}{paquete de simulación de sistemas eléctricos en MATLAB}
+\newacronym{VFlexP}{VFlexP}{herramienta interna del IIT para análisis de flujos de potencia en sistemas híbridos AC/DC}
+\newacronym{ENTSOE}{ENTSO-E}{{\em European Network of Transmission System Operators for Electricity}}
+\newacronym{REE}{REE}{Red Eléctrica de España}
+\newacronym{RTE}{RTE}{{\em Réseau de Transport d'Électricité}, operador francés}
+\newacronym{Terna}{Terna}{operador del sistema de transmisión italiano}
+
+%%%%%%% COMANDOS PARA LA TABLA DE LA PORTADA
+\newcommand{\projectname}{}
+\newcommand{\project}[1]{\renewcommand{\projectname}{#1}}
+\newcommand{\reviewernames}{}
+\newcommand{\revisedby}[1]{\renewcommand{\reviewernames}{#1}}
+\newcommand{\datedetailsname}{}
+\newcommand{\datedetails}[1]{\renewcommand{\datedetailsname}{#1}}
+\newcommand{\statename}{}
+\newcommand{\state}[1]{\renewcommand{\statename}{#1}}
+\newcommand{\referencenametable}{}
+\newcommand{\referencetable}[1]{\renewcommand{\referencenametable}{#1}}
+\newcommand{\ficheroname}{}
+\newcommand{\fichero}[1]{\renewcommand{\ficheroname}{#1}}
+
+\makeatletter
+
+\project{CONECCMAR}
+\title{Flujo óptimo de potencia mediante relajación convexa SOC para sistemas híbridos AC/DC. Aplicación al enlace HVDC España--Italia}
+    \let\Title\@title
+\author{Mohammad Rajabdorri}
+    \let\Author\@author
+\revisedby{}
+\datedetails{21-05-2026}
+    \let\Date\@date
+\state{Borrador}
+\referencetable{Sin ref. no.}
+\fichero{SOCOPF\_doc.zip}
+
+\makeatother
+
+\begin{document}
+
+\maketitle
+
+\noindent \hrulefill
+
+\tableofcontents\thispagestyle{fancy}
+
+\noindent \hrulefill
+
+\glsresetall
+
+\newpage
+\section{Introducción}
+
+El proyecto CONECCMAR contempla, entre otras infraestructuras, un enlace
+\gls{HVDC} submarino de \SI{2}{GW} entre España e Italia. El análisis
+estacionario de este tipo de sistemas híbridos AC/DC requiere herramientas
+de flujo de cargas y de flujo óptimo de potencia (\gls{OPF}) capaces de
+representar correctamente el modelo de los convertidores \gls{VSC} y la
+red de continua. La herramienta interna del IIT \gls{VFlexP}, construida
+sobre {\sc Matpower}-\gls{FUBM} \citep{AlvarezBustos2021}, resuelve el
+problema mediante un solver iterativo Newton--Raphson; sin embargo, al
+tratarse de una formulación no convexa, no garantiza el óptimo global y
+puede converger a soluciones locales o no converger.
+
+Las relajaciones convexas del problema de \gls{OPF} han alcanzado un grado
+de madurez notable en la última década
+\citep{MolzahnHiskens2019,Low2014a,Low2014b}. Las dos familias principales
+son la relajación \gls{SDP}, que es la más ajustada teóricamente pero la
+más costosa de resolver, y la relajación \gls{SOCP} (con el modelo
+``rotated SOC''), que es menos ajustada pero mucho más eficiente y
+soportada por solvers comerciales como Gurobi. Trabajos recientes
+\citep{KocukDeySun2016} han demostrado que, con refuerzos adecuados, la
+relajación \gls{SOCP} puede ser tan ajustada como la \gls{SDP} en una
+amplia variedad de casos. Para sistemas radiales se ha probado además que
+ambas relajaciones son equivalentes.
+
+El modelo convexo de rama flexible (\gls{CFBM}) propuesto por
+\citet{HigueraGutierrez2025} extiende la relajación \gls{SOCP} clásica
+para incorporar los convertidores \gls{VSC} en una formulación unificada
+con la red de alterna. Cada convertidor se representa mediante una rama
+de transformador no ideal entre el nodo de continua y un nodo virtual,
+seguida de una rama-$\pi$ convencional entre el nodo virtual y el nodo
+físico de alterna, junto con una fuente reactiva auxiliar acotada en el
+nodo virtual. Esta descomposición permite mantener el problema entero
+dentro de la formulación \gls{SOCP}.
+
+El objetivo de este documento es presentar la implementación de un
+\gls{OPF} basado en la relajación \gls{CFBM}-\gls{SOC} para el caso de
+estudio del proyecto CONECCMAR, validarlo frente al flujo de cargas de
+referencia que utiliza \gls{VFlexP}, y discutir su precisión y posibles
+usos: bien como solver convexo independiente, bien como herramienta de
+{\em warm-start} para los solvers iterativos no convexos existentes.
+
+\section{Formulación del problema}
+\label{sec:formulation}
+
+Sea $\mathcal{B}$ el conjunto de nudos del sistema híbrido,
+$\mathcal{L}_{AC}$ el conjunto de líneas de \gls{CA},
+$\mathcal{L}_{DC}$ el de líneas de \gls{CC} y $\mathcal{C}$ el de
+convertidores. Se introduce el cambio de variables clásico de la
+relajación \gls{SOCP}: para cada nudo $i$,
+$W_{ii} = |V_i|^2 \ge 0$; y para cada par $(i,j)$ conectado por una rama,
+$W_{ij} = V_i V_j^{*}$, descompuesto en sus partes real e imaginaria,
+$W^{re}_{ij}$ y $W^{im}_{ij}$.
+
+\subsection{Restricciones básicas}
+
+Las ecuaciones de balance de potencia activa y reactiva en cada nudo, los
+límites de tensión y las restricciones térmicas de las ramas se escriben
+linealmente en las variables $W$. La no linealidad procede únicamente del
+acoplamiento entre $W_{ii}$, $W_{jj}$ y $W_{ij}$, que se sustituye por la
+restricción de cono rotado
+\begin{equation}
+4 \left( (W^{re}_{ij})^2 + (W^{im}_{ij})^2 \right) +
+\left( W_{ii} - W_{jj} \right)^2 \le \left( W_{ii} + W_{jj} \right)^2,
+\label{eq:soc}
+\end{equation}
+que es la relajación cónica de la identidad $|V_i V_j^{*}|^2 = W_{ii} W_{jj}$. La
+relajación es {\em ajustada} (tight) cuando \eqref{eq:soc} se satisface con
+igualdad en el óptimo.
+
+\subsection{Modelo CFBM del convertidor VSC}
+
+Cada convertidor $k \in \mathcal{C}$ se representa, siguiendo
+\citet{HigueraGutierrez2025}, mediante tres elementos:
+\begin{enumerate}
+  \item Una {\em rama de transformador no ideal} entre el nudo primario
+  de continua $p$ y un nudo virtual $m$. En la formulación SOCP se
+  impone $W^{im}_{pm}=0$, $W^{re}_{pm}\ge 0$ y la cota del tap
+  $\tau_{min}^2 W_{mm} \le W_{pp} \le \tau_{max}^2 W_{mm}$.
+  \item Una {\em rama-$\pi$ convencional} entre el nudo virtual $m$ y el
+  nudo físico de alterna $a$, con parámetros $(r,x,b)$ del convertidor.
+  \item Una {\em fuente reactiva auxiliar} $Q_z$ en el nudo virtual,
+  acotada por
+  \begin{equation}
+  B_{eq}^{min} W_{mm} \le Q_z \le B_{eq}^{max} W_{mm}.
+  \label{eq:qz}
+  \end{equation}
+\end{enumerate}
+El paso de potencia se conserva: $P^{NI}_{p \to m} = -P^{NI}_{m \to p}$ y
+$Q^{NI}_{p \to m} = 0$ (no se transmite reactiva por el lado de continua).
+Las pérdidas por conmutación se modelan mediante un susceptancia $G_{sw}$
+en el nudo primario.
+
+\subsection{Convertidores en regulación de tensión}
+
+En este estudio los convertidores se modelan como estaciones \gls{GFL}
+que regulan la tensión del nudo de \gls{CA} a \SI{1}{pu}. Esto se impone
+añadiendo la restricción $W_{aa} = 1$ para cada convertidor. La potencia
+activa transmitida queda como variable libre del problema.
+
+\subsection{Función objetivo}
+
+Se utiliza un objetivo lineal proporcional al despacho activo de los
+generadores:
+\begin{equation}
+\min \quad \sum_{g \in \mathcal{G}} c_{1,g} P_g,
+\label{eq:obj}
+\end{equation}
+donde $c_{1,g}$ es el coste marginal de cada generador. La elección de
+estos coeficientes se discute en la sección~\ref{sec:data}.
+
+\section{Caso de estudio}
+\label{sec:case}
+
+El caso de estudio es el sistema de prueba de nueve nudos con dos
+convertidores \gls{CC}/\gls{CA} descrito en detalle en el informe interno
+{\em Parámetros del sistema de prueba} \citep{TomasMartin2026}. La
+topología y los parámetros eléctricos completos (admitancias de línea,
+relaciones de transformación, parámetros de los convertidores, etc.) se
+toman directamente de dicho documento y no se reproducen aquí. El
+sistema agrupa la generación y la carga de tres países (España, Francia
+e Italia) en sendos buses equivalentes; el enlace \gls{HVDC} bipolo
+España--Italia se modela como dos segmentos de línea de \gls{CC} con un
+nudo intermedio entre los convertidores. La base del sistema utilizada
+en el modelo \gls{CFBM}-\gls{SOC} es $S_b = \SI{2000}{MVA}$.
+
+\section{Datos y supuestos}
+\label{sec:data}
+
+\subsection{Capacidad instalada de generación}
+
+Para cada nudo-país se utiliza como $P_{max}$ una estimación de la
+capacidad despachable instalada en 2024, según los informes anuales de
+los respectivos \gls{TSO} (\gls{REE}, \gls{RTE} y \gls{Terna}). Los
+valores se resumen en la Tabla~\ref{tab:gencap}. El límite reactivo se
+fija en $\pm 30\,\%$ de $P_{max}$, una envolvente PQ típica para
+generación agregada a nivel nacional.
+
+\begin{table}[h]
+\centering
+\caption{Capacidad instalada utilizada como $P_{max}$ y envolvente reactiva.}
+\label{tab:gencap}
+\begin{tabular}{lccc}
+\toprule
+Nudo / país & $P_{max}$ [MW] & $Q_{max}$ [MVAr] & $Q_{min}$ [MVAr] \\
+\midrule
+1 -- España & 120\,000 & $+36\,000$ & $-36\,000$ \\
+7 -- Francia & 150\,000 & $+45\,000$ & $-45\,000$ \\
+9 -- Italia & 125\,000 & $+37\,500$ & $-37\,500$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Capacidades de interconexión}
+
+Las capacidades térmicas de las interconexiones se toman de los valores
+públicos de \gls{NTC} comerciales publicados por \gls{ENTSOE} (2024) y
+de las especificaciones del proyecto CONECCMAR. Los valores se resumen
+en la Tabla~\ref{tab:lines}.
+
+\begin{table}[h]
+\centering
+\caption{Capacidades térmicas de las interconexiones modelizadas.}
+\label{tab:lines}
+\begin{tabular}{lcl}
+\toprule
+Interconexión & Capacidad & Fuente \\
+\midrule
+España--Francia (línea 2--6, CA) & \SI{2.8}{GW} & INELFE HVDC + Pirineos CA, ENTSO-E 2024 \\
+Francia--Italia (línea 6--8, CA) & \SI{4.35}{GW} & Albertville/Rondissone + Savoie-Piemonte HVDC \\
+España--Italia (\gls{HVDC} 3--4--5) & \SI{2.0}{GW} & Especificación CONECCMAR \\
+Estación convertidora & \SI{2.5}{GVA} & Sobredimensionada para soporte reactivo \\
+Resto de líneas AC internas & \SI{200}{GVA} (placeholder) & No restrictivas \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El límite térmico del cable \gls{HVDC} se ha fijado en $\SI{2.0}{GW}
++ \SI{50}{MW}$ de margen para absorber las pérdidas $I^2R$ del segmento
+4--5, que asciende a unos \SI{30}{MW} a plena potencia.
+
+\subsection{Costes marginales relativos}
+
+Los coeficientes $c_{1,g}$ del objetivo se eligen proporcionalmente al
+precio mayorista medio horario de la electricidad en cada país,
+utilizando el conjunto de datos {\em European Wholesale Electricity
+Price Data} para el periodo 2015--2026. Tomando la media de cada serie
+y normalizando España a $1.0$ se obtienen los valores de la
+Tabla~\ref{tab:cost}. Se utiliza la media a largo plazo en lugar de
+valores recientes porque el presente estudio tiene carácter de
+planificación, no de despacho en tiempo real.
+
+\begin{table}[h]
+\centering
+\caption{Coste marginal relativo utilizado por generador.}
+\label{tab:cost}
+\begin{tabular}{lcc}
+\toprule
+Nudo / país & Precio medio [EUR/MWh] & $c_1$ (relativo) \\
+\midrule
+1 -- España & 70{,}23 & 1{,}00 \\
+7 -- Francia & 76{,}67 & 1{,}10 \\
+9 -- Italia & 99{,}26 & 1{,}40 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Implementación}
+\label{sec:impl}
+
+La implementación es íntegramente Python, sobre Gurobi 12 como solver
+\gls{SOCP} y {\tt openpyxl} para la lectura/escritura del libro de Excel
+que contiene los datos. El código se organiza en dos módulos:
+
+\begin{itemize}
+  \item {\tt case\_connectmar.py} — carga el caso desde el libro Excel
+  ({\em Datos estáticos red/coneccmar\_2G.xlsx}), construye la
+  topología \gls{CFBM} (incluyendo los nudos virtuales), aplica las
+  conversiones de unidades y los sobrenombres de capacidad
+  (Tablas~\ref{tab:gencap} y~\ref{tab:lines}), e invoca el solver.
+  \item {\tt cfbm\_opf\_solver.py} — construye el modelo de Gurobi:
+  variables $W$, $P$, $Q$, $P_g$, $Q_g$, $Q_z$; restricciones de
+  balance, cono rotado~\eqref{eq:soc}, modelo no ideal de transformador,
+  cotas~\eqref{eq:qz} y límites térmicos. Implementa también la
+  recuperación de las tensiones complejas $V$ a partir de la matriz $W$
+  mediante el Algoritmo~1 de \citet{HigueraGutierrez2025}.
+\end{itemize}
+
+Para garantizar una brecha de relajación numérica suficientemente
+pequeña se utilizan tolerancias de Gurobi ajustadas:
+{\tt BarConvTol = BarQCPConvTol = 10\textsuperscript{-9}},
+{\tt FeasibilityTol = OptimalityTol = 10\textsuperscript{-7}},
+{\tt NumericFocus = 2}.
+
+\section{Resultados y validación}
+\label{sec:results}
+
+Los resultados del \gls{CFBM}-\gls{SOC} \gls{OPF} se contrastan frente
+al solver de flujo de cargas AC/DC Newton--Raphson de
+{\sc Matpower}-\gls{FUBM}, que es el motor numérico utilizado
+internamente por \gls{VFlexP}. La comparación no es directamente
+{\em apples-to-apples}: el motor de Newton--Raphson resuelve un flujo de
+cargas con consignas fijas de despacho activo en los nudos PV (y la
+holgura en el nudo {\em slack}), mientras que el \gls{OPF} convexo
+optimiza el despacho dentro de los límites marcados, sujeto a la
+función de coste \eqref{eq:obj}. No obstante, sirve como referencia
+sólida de validez física.
+
+\subsection{Despacho}
+
+La Tabla~\ref{tab:dispatch} compara el despacho total por país. La
+desviación en el agregado es del orden del $0{,}02\,\%$.
+
+\begin{table}[h]
+\centering
+\caption{Despacho activo por país (MW).}
+\label{tab:dispatch}
+\begin{tabular}{lccc}
+\toprule
+País & Newton--Raphson (VFlexP) & CFBM--SOC & $\Delta$ \\
+\midrule
+España & 33\,766 & 33\,002 & $-2{,}3\,\%$ \\
+Italia & 50\,000 & 49\,650 & $-0{,}7\,\%$ \\
+Francia (slack) & 71\,325 & 72\,411 & $+1{,}5\,\%$ \\
+\midrule
+Total & 155\,091 & 155\,063 & $-0{,}02\,\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Tensiones y ángulos}
+
+Las tensiones de los nudos físicos coinciden con la referencia dentro
+de \SI{0.003}{pu} en todos los buses (Tabla~\ref{tab:voltages}). Los
+nudos 2 y 8 quedan regulados a exactamente \SI{1.0}{pu} por la acción
+de los convertidores. Los ángulos siguen el mismo patrón cualitativo
+(España adelanta, Italia se retrasa respecto al {\em slack} francés);
+las diferencias absolutas se deben principalmente a la libertad de
+redespacho del \gls{OPF} frente a las consignas fijas del flujo de
+cargas.
+
+\begin{table}[h]
+\centering
+\caption{Tensiones y ángulos: comparación con la referencia Newton--Raphson.}
+\label{tab:voltages}
+\begin{tabular}{cclcccc}
+\toprule
+Bus & País & Función & NR $|V|$ & CFBM $|V|$ & NR $\angle$ & CFBM $\angle$ \\
+\midrule
+1 & España & Generador & 1{,}0170 & 1{,}01642 & $+28{,}78^\circ$ & $+21{,}74^\circ$ \\
+2 & España & Carga (regulado) & 1{,}0000 & 1{,}00000 & $+27{,}85^\circ$ & $+20{,}83^\circ$ \\
+3 & --- & DC España & 1{,}0151 & 1{,}01790 & --- & $0$ \\
+4 & --- & DC intermedio & 1{,}0150 & 1{,}01780 & --- & $0$ \\
+5 & --- & DC Italia & 1{,}0000 & 1{,}00270 & --- & $0$ \\
+6 & Francia & Nudo de cruce & 0{,}9927 & 0{,}99258 & $-0{,}40^\circ$ & $-0{,}41^\circ$ \\
+7 & Francia & Generador (slack) & 1{,}0000 & 1{,}00000 & $0$ & $0$ \\
+8 & Italia & Carga (regulado) & 0{,}9996 & 1{,}00000 & $-35{,}14^\circ$ & $-38{,}95^\circ$ \\
+9 & Italia & Generador & 1{,}0123 & 1{,}01263 & $-34{,}46^\circ$ & $-38{,}27^\circ$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Utilización de las interconexiones}
+
+El enlace \gls{HVDC} España--Italia opera a su límite térmico
+(saturación al \SI{100}{\percent}), pero como restricción de
+desigualdad: el \gls{OPF} elige saturar el cable porque, dada la
+estructura de costes relativos (Italia más caro que España y Francia),
+maximizar el flujo por el enlace es la opción económicamente óptima.
+La interconexión Francia--Italia (línea 6--8) opera al \SI{97}{\percent}
+de su \gls{NTC}, y la España--Francia al \SI{87}{\percent}.
+
+\subsection{Brecha de la relajación SOC}
+
+En el óptimo, la brecha de cono $W_{ii} W_{jj} - |W_{ij}|^2$ es como
+máximo $1{,}5 \times 10^{-7}$ en las parejas físicas, lo que es
+indistinguible del ruido numérico del solver. La relajación es por
+tanto {\em ajustada} en este caso: no existe margen entre la solución
+SOCP y una solución factible de rango 1 sobre la red física. Las
+parejas asociadas a los transformadores no ideales del modelo
+\gls{CFBM} exhiben una brecha de magnitud unitaria, pero ello forma
+parte del diseño del modelo \citep{HigueraGutierrez2025} y no
+representa pérdida de tightness: en esas parejas $W_{ij}$ no se
+utiliza, y el paso de potencia se encauza a través de variables
+auxiliares $P$, $Q$ específicas.
+
+\subsection{Validación física: recuperación de $V$ a partir de $W$}
+
+Aplicando el Algoritmo~1 de \citet{HigueraGutierrez2025} para
+reconstruir las tensiones complejas a partir de la matriz $W$
+solucionada, los módulos recuperados coinciden con $\sqrt{W_{ii}}$ con
+cinco decimales en todos los nudos físicos. Esto confirma que la
+solución \gls{SOCP} es físicamente realizable y de rango 1 sobre la red.
+
+\section{Conclusiones}
+\label{sec:conclusions}
+
+La relajación \gls{CFBM}-\gls{SOC} aplicada al caso CONECCMAR
+\begin{enumerate}
+  \item resuelve a optimalidad en una sola pasada con Gurobi y es
+  numéricamente ajustada (brecha máxima $\sim 10^{-7}$);
+  \item reproduce el despacho del flujo de cargas Newton--Raphson de
+  {\sc Matpower}-\gls{FUBM} dentro del $0{,}02\,\%$ en el agregado y
+  las tensiones dentro de $0{,}003$\,pu;
+  \item bajo el escenario de costes considerado, satura el enlace
+  \gls{HVDC} España--Italia por motivos económicos, no por
+  restricciones impuestas a priori;
+  \item produce una solución de la que se pueden recuperar tensiones
+  complejas con sentido físico, lo que la habilita como punto inicial
+  ({\em warm start}) para los solvers iterativos no convexos del
+  flujo de cargas o del \gls{OPF} no lineal.
+\end{enumerate}
+
+\bibliographystyle{ieeetr}
+\bibliography{BibSOCOPF}
+
+\end{document}

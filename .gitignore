@@ -1,0 +1,39 @@
+# LaTeX build artifacts ---------------------------------------------------
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.nav
+*.snm
+*.vrb
+
+# Glossaries package files
+*.glo
+*.gls
+*.glg
+*.acn
+*.acr
+*.alg
+*.ist
+*.xdy
+
+# Built PDF of the main document (Overleaf rebuilds; figures are kept)
+/main_SOCOPF.pdf
+
+# OS / editor cruft -------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+*.swp
+*~
