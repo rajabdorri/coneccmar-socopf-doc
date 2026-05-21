@@ -208,7 +208,7 @@ nudos equivalentes interconectados por dos líneas de \gls{CA} y un enlace
 
 Como $P_{max}$ de cada nudo-país se utiliza la capacidad despachable
 instalada en 2024 publicada por los respectivos \gls{TSO} (\gls{REE},
-\gls{RTE} y \gls{Terna}). El límite reactivo se fija en $\pm 30\,\%$ de
+\gls{RTE} y \gls{Terna}). El límite reactivo se fija en $\pm 30\%$ de
 $P_{max}$, una envolvente PQ típica para generación agregada a escala
 nacional (Tabla~\ref{tab:gencap}).
 
@@ -312,7 +312,7 @@ obstante, sirve como referencia sólida de validez física.
 \subsection{Despacho}
 
 La Tabla~\ref{tab:dispatch} compara el despacho por país. La desviación
-en el agregado es del orden del $0{,}02\,\%$.
+en el agregado es del orden del $0{,}02\%$.
 
 \begin{table}[h]
 \centering
@@ -322,11 +322,11 @@ en el agregado es del orden del $0{,}02\,\%$.
 \toprule
 País & NR (referencia) & CFBM--SOC & $\Delta$ \\
 \midrule
-España & 33\,766 & 33\,002 & $-2{,}3\,\%$ \\
-Italia & 50\,000 & 49\,650 & $-0{,}7\,\%$ \\
-Francia (slack) & 71\,325 & 72\,411 & $+1{,}5\,\%$ \\
+España & 33\,766 & 33\,002 & $-2{,}3\%$ \\
+Italia & 50\,000 & 49\,650 & $-0{,}7\%$ \\
+Francia (slack) & 71\,325 & 72\,411 & $+1{,}5\%$ \\
 \midrule
-Total & 155\,091 & 155\,063 & $-0{,}02\,\%$ \\
+Total & 155\,091 & 155\,063 & $-0{,}02\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -395,21 +395,32 @@ realizable y de rango uno sobre la red.
 \section{Conclusiones}
 \label{sec:conclusions}
 
-La relajación \gls{CFBM}-\gls{SOC} aplicada al caso CONECCMAR
-\begin{enumerate}
-  \item resuelve a optimalidad en una sola pasada y es numéricamente
-  ajustada (brecha máxima $\sim 10^{-7}$);
-  \item reproduce el despacho del flujo de cargas Newton--Raphson de
-  \gls{MATPOWER}-\gls{FUBM} dentro del $0{,}02\,\%$ en el agregado y las
-  tensiones dentro de $\SI{0.003}{pu}$;
-  \item bajo el escenario de costes considerado, satura el enlace
-  \gls{HVDC} España--Italia por motivos económicos y no por una
-  restricción impuesta a priori sobre la consigna del convertidor;
-  \item produce una solución de la que pueden recuperarse tensiones
-  complejas con sentido físico, lo que la habilita como punto inicial
-  para los solvers iterativos no convexos del flujo de cargas o del
-  \gls{OPF} no lineal.
-\end{enumerate}
+La relajación \gls{CFBM}-\gls{SOC} aplicada al caso CONECCMAR resuelve a
+optimalidad en una sola pasada con Gurobi y es numéricamente ajustada,
+con una brecha de cono máxima del orden de $10^{-7}$ en las parejas
+físicas. Su despacho reproduce el del flujo de cargas Newton--Raphson de
+\gls{MATPOWER}-\gls{FUBM} dentro del $0{,}02\%$ en el agregado, y las
+tensiones recuperadas coinciden con la referencia dentro de
+$\SI{0.003}{pu}$ en todos los nudos del sistema. El acuerdo es
+suficientemente bueno como para considerar el método validado físicamente
+para el caso estudiado.
+
+Bajo el escenario de costes considerado, el \gls{OPF} satura el enlace
+\gls{HVDC} España--Italia por motivos económicos y no por una restricción
+impuesta a priori sobre la consigna del convertidor. La interconexión
+Francia--Italia opera muy próxima a su \gls{NTC} comercial, lo que
+confirma que la representación de los límites de transferencia
+fronterizos es coherente con el comportamiento esperado del sistema en
+un horizonte de planificación.
+
+Por último, la solución \gls{SOCP} es de rango uno sobre la red física:
+las tensiones complejas reconstruidas por el algoritmo de recuperación
+coinciden con $\sqrt{W_{ii}}$ hasta cinco decimales en todos los nudos
+físicos. Esto la habilita como punto inicial de calidad para los solvers
+iterativos no convexos del flujo de cargas o del \gls{OPF} no lineal, lo
+que abre la vía a su integración futura como herramienta interna de
+\gls{VFlexP}, bien como solver convexo independiente, bien como
+generador de un punto inicial cercano al óptimo global.
 
 \bibliographystyle{IEEEtran}
 \bibliography{BibSOCOPF}
